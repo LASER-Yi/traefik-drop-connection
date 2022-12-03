@@ -1,10 +1,10 @@
-displayName: Demo Plugin
+displayName: Drop Connection Plugin
 type: middleware
 iconPath: .assets/icon.png
 
-import: github.com/traefik/plugindemo
+import: https://github.com/LASER-Yi/traefik-drop-connection
 
-summary: '[Demo] Add Request Header'
+summary: 'A traefik which will act as a middleware to drop connection on condition'
 
 testData:
   Headers:
