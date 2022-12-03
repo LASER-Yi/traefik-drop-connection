@@ -4,7 +4,7 @@ iconPath: .assets/icon.png
 
 import: github.com/LASER-Yi/traefik-drop-connection
 
-summary: 'A traefik which will act as a middleware to drop connection on condition'
+summary: 'A traefik which acts as a middleware to drop connection based on status code'
 
 testData:
-  status_code: 300-599
+  statusCode: 300-599
