@@ -12,7 +12,7 @@ import (
 
 // Config the plugin configuration.
 type Config struct {
-	StatusCode string `json:"status_code,omitempty"`
+	StatusCode string `yaml:"statusCode,omitempty"`
 }
 
 // CreateConfig creates the default plugin configuration.
@@ -56,6 +56,8 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 		end_code = end
 	}
 
+	log.Printf("%s will read from upstream and waiting for the status code between %d and %d", name, start_code, end_code)
+
 	return &dropConnection{
 		next:              next,
 		name:              name,
@@ -64,7 +66,33 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 	}, nil
 }
 
-func (a *dropConnection) ResetConn(w http.ResponseWriter, req *http.Request) {
+func (p *dropConnection) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+	// TODO: Check condition
+	if p.status_code_start != 0 && p.status_code_end != 0 {
+		// Let's send a request to the next chain and wait for the feedback
+		wrappedWriter := &responseWriter{ResponseWriter: rw}
+
+		p.next.ServeHTTP(wrappedWriter, req)
+
+		statusCode := wrappedWriter.status_code
+
+		if statusCode == 0 {
+			statusCode = 200
+		}
+
+		bodyBytes := wrappedWriter.buffer.Bytes()
+
+		if statusCode < p.status_code_start || p.status_code_end < statusCode {
+			rw.WriteHeader(statusCode)
+			rw.Write(bodyBytes)
+			return
+		}
+	}
+
+	resetConn(rw, req)
+}
+
+func resetConn(w http.ResponseWriter, req *http.Request) {
 	if wr, ok := w.(http.Hijacker); ok {
 		conn, _, err := wr.Hijack()
 		if err != nil {
@@ -77,45 +105,15 @@ func (a *dropConnection) ResetConn(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func (a *dropConnection) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-	// TODO: Check condition
-	if a.status_code_start != 0 && a.status_code_end != 0 {
-		// Let's send a request to the next chain and wait for the feedback
-		wrappedWriter := &responseWriter{}
-
-		log.Printf("read from upstream and waiting for the status code between %d and %d", a.status_code_start, a.status_code_end)
-
-		a.next.ServeHTTP(wrappedWriter, req)
-
-		statusCode := wrappedWriter.statusCode
-		if statusCode == 0 {
-			statusCode = 200
-		}
-
-		bodyBytes := wrappedWriter.buffer.Bytes()
-
-		log.Printf("received status code %d", statusCode)
-
-		if statusCode < a.status_code_start || a.status_code_end < statusCode {
-			rw.Write(bodyBytes)
-			return
-		}
-	}
-
-	a.ResetConn(rw, req)
-}
-
 type responseWriter struct {
-	buffer     bytes.Buffer
-	statusCode int
+	buffer      bytes.Buffer
+	status_code int
 
 	http.ResponseWriter
 }
 
 func (r *responseWriter) WriteHeader(statusCode int) {
-	r.statusCode = statusCode
-
-	r.ResponseWriter.WriteHeader(statusCode)
+	r.status_code = statusCode
 }
 
 func (r *responseWriter) Write(p []byte) (int, error) {
