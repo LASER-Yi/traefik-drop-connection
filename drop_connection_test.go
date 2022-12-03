@@ -11,10 +11,10 @@ import (
 	traefik_drop_connection "github.com/LASER-Yi/traefik-drop-connection"
 )
 
-var defaultCtx = []byte("It works!")
+var defaultCtx = "It works!"
 
 func DefaultContextHandler(rw http.ResponseWriter, req *http.Request) {
-	rw.Write(defaultCtx)
+	rw.Write([]byte(defaultCtx))
 }
 
 func TestDropConnection(t *testing.T) {
@@ -65,11 +65,11 @@ func TestDropConnectionOutsideRange(t *testing.T) {
 
 	result := recorder.Result()
 
-	if result.StatusCode != 200 {
+	if result.StatusCode != http.StatusOK {
 		t.Error("The context handler should return 200")
 	}
 
-	assertBody(t, result.Body, defaultCtx)
+	assertBody(t, result.Body, []byte(defaultCtx))
 }
 
 func TestDropConnectionInsideRange(t *testing.T) {
@@ -95,7 +95,7 @@ func TestDropConnectionInsideRange(t *testing.T) {
 
 	result := recorder.Result()
 
-	if result.StatusCode != 200 {
+	if result.StatusCode != http.StatusOK {
 		t.Error("The context handler should return 200")
 	}
 
@@ -106,7 +106,7 @@ func assertBody(t *testing.T, body io.Reader, expected []byte) {
 	t.Helper()
 
 	if resp, err := io.ReadAll(body); err == nil {
-		if bytes.Compare(resp, expected) != 0 {
+		if bytes.Equal(resp, expected) == false {
 			t.Errorf("invalid body content \"%s\", should be \"%s\"", string(resp), string(expected))
 		}
 	}

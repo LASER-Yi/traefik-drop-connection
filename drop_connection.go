@@ -23,16 +23,16 @@ func CreateConfig() *Config {
 }
 
 type dropConnection struct {
-	next              http.Handler
-	name              string
-	status_code_start int
-	status_code_end   int
+	next            http.Handler
+	name            string
+	statusCodeStart int
+	statusCodeEnd   int
 }
 
 func New(ctx context.Context, next http.Handler, config *Config, name string) (http.Handler, error) {
 
-	start_code := 0
-	end_code := 0
+	startCode := 0
+	endCode := 0
 	if len(config.StatusCode) != 0 {
 		codes := strings.Split(config.StatusCode, "-")
 
@@ -43,38 +43,38 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 		start, err := strconv.Atoi(codes[0])
 
 		if err != nil {
-			return nil, fmt.Errorf("error converting first status code to integer, %s", err)
+			return nil, fmt.Errorf("error converting first status code to integer, %w", err)
 		}
 
 		end, err := strconv.Atoi(codes[1])
 
 		if err != nil {
-			return nil, fmt.Errorf("error converting second status code to integer, %s", err)
+			return nil, fmt.Errorf("error converting second status code to integer, %w", err)
 		}
 
-		start_code = start
-		end_code = end
+		startCode = start
+		endCode = end
 	}
 
-	log.Printf("%s will read from upstream and waiting for the status code between %d and %d", name, start_code, end_code)
+	log.Printf("%s will read from upstream and waiting for the status code between %d and %d", name, startCode, endCode)
 
 	return &dropConnection{
-		next:              next,
-		name:              name,
-		status_code_start: start_code,
-		status_code_end:   end_code,
+		next:            next,
+		name:            name,
+		statusCodeStart: startCode,
+		statusCodeEnd:   endCode,
 	}, nil
 }
 
 func (p *dropConnection) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	// TODO: Check condition
-	if p.status_code_start != 0 && p.status_code_end != 0 {
+	if p.statusCodeStart != 0 && p.statusCodeEnd != 0 {
 		// Let's send a request to the next chain and wait for the feedback
 		wrappedWriter := &responseWriter{ResponseWriter: rw}
 
 		p.next.ServeHTTP(wrappedWriter, req)
 
-		statusCode := wrappedWriter.status_code
+		statusCode := wrappedWriter.statusCode
 
 		if statusCode == 0 {
 			statusCode = 200
@@ -82,17 +82,17 @@ func (p *dropConnection) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 		bodyBytes := wrappedWriter.buffer.Bytes()
 
-		if statusCode < p.status_code_start || p.status_code_end < statusCode {
+		if statusCode < p.statusCodeStart || p.statusCodeEnd < statusCode {
 			rw.WriteHeader(statusCode)
 			rw.Write(bodyBytes)
 			return
 		}
 	}
 
-	resetConn(rw, req)
+	resetConn(rw)
 }
 
-func resetConn(w http.ResponseWriter, req *http.Request) {
+func resetConn(w http.ResponseWriter) {
 	if wr, ok := w.(http.Hijacker); ok {
 		conn, _, err := wr.Hijack()
 		if err != nil {
@@ -106,14 +106,14 @@ func resetConn(w http.ResponseWriter, req *http.Request) {
 }
 
 type responseWriter struct {
-	buffer      bytes.Buffer
-	status_code int
+	buffer     bytes.Buffer
+	statusCode int
 
 	http.ResponseWriter
 }
 
 func (r *responseWriter) WriteHeader(statusCode int) {
-	r.status_code = statusCode
+	r.statusCode = statusCode
 }
 
 func (r *responseWriter) Write(p []byte) (int, error) {
