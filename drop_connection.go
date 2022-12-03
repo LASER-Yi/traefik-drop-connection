@@ -1,3 +1,4 @@
+// Traefik plugin package
 package traefik_drop_connection
 
 import (
@@ -29,6 +30,7 @@ type dropConnection struct {
 	statusCodeEnd   int
 }
 
+// New instantiates and returns the required components used to handle a HTTP request
 func New(ctx context.Context, next http.Handler, config *Config, name string) (http.Handler, error) {
 
 	startCode := 0
@@ -66,6 +68,8 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 	}, nil
 }
 
+// Check if the upstream's return is outside the given status code
+// use hijacker to reset the connection when is inside
 func (p *dropConnection) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	// TODO: Check condition
 	if p.statusCodeStart != 0 && p.statusCodeEnd != 0 {
@@ -84,7 +88,10 @@ func (p *dropConnection) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 		if statusCode < p.statusCodeStart || p.statusCodeEnd < statusCode {
 			rw.WriteHeader(statusCode)
-			rw.Write(bodyBytes)
+			_, err := rw.Write(bodyBytes)
+			if err != nil {
+				log.Println("error when writing upstream data to writer", err)
+			}
 			return
 		}
 	}
@@ -99,7 +106,12 @@ func resetConn(w http.ResponseWriter) {
 			log.Println(w, err)
 			return
 		}
-		conn.Close()
+
+		err = conn.Close()
+
+		if err != nil {
+			log.Println(w, err)
+		}
 	} else {
 		log.Println("Cannot reset connection, the hijacker is not existed")
 	}

@@ -1,9 +1,11 @@
+// Testing library for this plugin
 package traefik_drop_connection_test
 
 import (
 	"bytes"
 	"context"
 	"io"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -11,10 +13,13 @@ import (
 	traefik_drop_connection "github.com/LASER-Yi/traefik-drop-connection"
 )
 
-var defaultCtx = "It works!"
+const defaultCtx = "It works!"
 
 func DefaultContextHandler(rw http.ResponseWriter, req *http.Request) {
-	rw.Write([]byte(defaultCtx))
+	_, err := rw.Write([]byte(defaultCtx))
+	if err != nil {
+		log.Println("error when creating context handler", err)
+	}
 }
 
 func TestDropConnection(t *testing.T) {
