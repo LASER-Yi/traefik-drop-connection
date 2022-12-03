@@ -2,11 +2,9 @@ displayName: Drop Connection Plugin
 type: middleware
 iconPath: .assets/icon.png
 
-import: https://github.com/LASER-Yi/traefik-drop-connection
+import: github.com/LASER-Yi/traefik-drop-connection
 
 summary: 'A traefik which will act as a middleware to drop connection on condition'
 
 testData:
-  Headers:
-    X-Demo: test
-    X-URL: '{{URL}}'
+  status_code: 300-599
