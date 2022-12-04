@@ -82,7 +82,7 @@ func (p *dropConnection) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		statusCode := wrappedWriter.statusCode
 
 		if statusCode == 0 {
-			statusCode = 200
+			statusCode = http.StatusOK
 		}
 
 		bodyBytes := wrappedWriter.buffer.Bytes()
@@ -100,7 +100,7 @@ func (p *dropConnection) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	err := resetConn(rw)
 
 	if err != nil {
-		rw.WriteHeader(http.StatusForbidden)
+		rw.WriteHeader(http.StatusInternalServerError)
 	}
 }
 
