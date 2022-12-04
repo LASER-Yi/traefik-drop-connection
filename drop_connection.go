@@ -1,11 +1,14 @@
-// Traefik plugin package
+// Package traefik_drop_connection plugin main package
 package traefik_drop_connection
 
 import (
+	"bufio"
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"strconv"
 	"strings"
@@ -58,8 +61,6 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 		endCode = end
 	}
 
-	log.Printf("%s will read from upstream and waiting for the status code between %d and %d", name, startCode, endCode)
-
 	return &dropConnection{
 		next:            next,
 		name:            name,
@@ -96,25 +97,30 @@ func (p *dropConnection) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	resetConn(rw)
+	err := resetConn(rw)
+
+	if err != nil {
+		rw.WriteHeader(http.StatusForbidden)
+	}
 }
 
-func resetConn(w http.ResponseWriter) {
+func resetConn(w http.ResponseWriter) error {
 	if wr, ok := w.(http.Hijacker); ok {
 		conn, _, err := wr.Hijack()
 		if err != nil {
-			log.Println(w, err)
-			return
+			return err
 		}
 
 		err = conn.Close()
 
 		if err != nil {
-			log.Println(w, err)
+			return err
 		}
 	} else {
-		log.Println("Cannot reset connection, the hijacker is not existed")
+		return fmt.Errorf("cannot reset connection, the hijacker is not existed")
 	}
+
+	return nil
 }
 
 type responseWriter struct {
@@ -130,4 +136,12 @@ func (r *responseWriter) WriteHeader(statusCode int) {
 
 func (r *responseWriter) Write(p []byte) (int, error) {
 	return r.buffer.Write(p)
+}
+
+func (r *responseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	h, ok := r.ResponseWriter.(http.Hijacker)
+	if !ok {
+		return nil, nil, errors.New("hijack not supported")
+	}
+	return h.Hijack()
 }

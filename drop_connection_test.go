@@ -1,4 +1,4 @@
-// Testing library for this plugin
+// Package traefik_drop_connection_test Testing library for this plugin
 package traefik_drop_connection_test
 
 import (
@@ -43,6 +43,10 @@ func TestDropConnection(t *testing.T) {
 	handler.ServeHTTP(recorder, req)
 
 	result := recorder.Result()
+
+	if result.StatusCode != http.StatusForbidden {
+		t.Errorf("The context handler should return 403, but return %d", result.StatusCode)
+	}
 
 	assertBody(t, result.Body, make([]byte, 0))
 }
@@ -100,8 +104,8 @@ func TestDropConnectionInsideRange(t *testing.T) {
 
 	result := recorder.Result()
 
-	if result.StatusCode != http.StatusOK {
-		t.Error("The context handler should return 200")
+	if result.StatusCode != http.StatusForbidden {
+		t.Errorf("The context handler should return 403, but return %d", result.StatusCode)
 	}
 
 	assertBody(t, result.Body, make([]byte, 0))
