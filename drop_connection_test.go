@@ -42,8 +42,8 @@ func TestDropConnection(t *testing.T) {
 
 	result := recorder.Result()
 
-	if result.StatusCode != http.StatusForbidden {
-		t.Errorf("The context handler should return 403, but return %d", result.StatusCode)
+	if result.StatusCode != http.StatusInternalServerError {
+		t.Errorf("The context handler should return 500, but return %d", result.StatusCode)
 	}
 
 	assertBody(t, result.Body, make([]byte, 0))
@@ -96,8 +96,8 @@ func TestDropConnectionInsideRange(t *testing.T) {
 
 	result := recorder.Result()
 
-	if result.StatusCode != http.StatusForbidden {
-		t.Errorf("The context handler should return 403, but return %d", result.StatusCode)
+	if result.StatusCode != http.StatusInternalServerError {
+		t.Errorf("The context handler should return 500, but return %d", result.StatusCode)
 	}
 
 	assertBody(t, result.Body, make([]byte, 0))
